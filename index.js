@@ -85,12 +85,14 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
-  // ✅ Twilio Webhook for TwiML Media Streams
+  // ✅ Twilio Webhook for TwiML Media Streams with explicit audio track
   else if (req.method === 'POST' && req.url === '/voice') {
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Start>
-    <Stream url="wss://ws-relay-server.onrender.com"/>
+    <Stream url="wss://ws-relay-server.onrender.com">
+      <Parameter name="track" value="inbound_audio"/>
+    </Stream>
   </Start>
   <Say>Hi, this is Miller Fence. One moment while we connect you to our AI assistant.</Say>
   <Pause length="1" />
@@ -102,13 +104,11 @@ const server = http.createServer(async (req, res) => {
     res.end(twiml);
   }
 
-  // All other routes
   else {
     res.writeHead(404).end();
   }
 });
 
-// ✅ WebSocket server for Twilio audio stream
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', async (ws) => {
