@@ -11,7 +11,6 @@ const PORT = process.env.PORT || 3000;
 const sessions = {}; // In-memory short-term memory
 
 const server = http.createServer(async (req, res) => {
-  // ✅ GPT intake logic
   if (req.method === 'POST' && req.url === '/intake') {
     let body = '';
     req.on('data', chunk => { body += chunk; });
@@ -85,21 +84,9 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
-  // ✅ Twilio Webhook for TwiML Media Streams with explicit audio track
+  // ✅ Cleaned-up TwiML: one-line <Stream> with explicit track param
   else if (req.method === 'POST' && req.url === '/voice') {
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Start>
-    <Stream url="wss://ws-relay-server.onrender.com">
-      <Parameter name="track" value="inbound_audio"/>
-    </Stream>
-  </Start>
-  <Say>Hi, this is Miller Fence. One moment while we connect you to our AI assistant.</Say>
-  <Pause length="1" />
-  <Say>Please begin speaking after the beep.</Say>
-  <Pause length="1" />
-</Response>`;
-
+    const twiml = '<?xml version="1.0" encoding="UTF-8"?><Response><Start><Stream url="wss://ws-relay-server.onrender.com"><Parameter name="track" value="inbound_audio"/></Stream></Start><Say>Hi, this is Miller Fence. One moment while we connect you to our AI assistant.</Say><Pause length="1" /><Say>Please begin speaking after the beep.</Say><Pause length="1" /></Response>';
     res.writeHead(200, { 'Content-Type': 'text/xml' });
     res.end(twiml);
   }
