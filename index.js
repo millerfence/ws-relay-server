@@ -7,12 +7,11 @@ import http from 'http';
 dotenv.config();
 
 const DG = createClient(process.env.DEEPGRAM_API_KEY);
-const VERCEL_API_ENDPOINT = process.env.VERCEL_API_ENDPOINT;
 const PORT = process.env.PORT || 3000;
-
 const sessions = {}; // In-memory short-term memory
 
 const server = http.createServer(async (req, res) => {
+  // ✅ GPT intake logic
   if (req.method === 'POST' && req.url === '/intake') {
     let body = '';
     req.on('data', chunk => { body += chunk; });
@@ -25,7 +24,6 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
-        // Session tracking
         if (!sessions[callerId]) {
           sessions[callerId] = { step: 'start', data: {} };
         }
@@ -81,15 +79,36 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ message: responseText }));
       } catch (e) {
-        console.error('Failed to process POST /intake:', e);
+        console.error('Failed to process /intake:', e);
         res.writeHead(500).end(JSON.stringify({ error: 'Server error' }));
       }
     });
-  } else {
+  }
+
+  // ✅ Twilio Webhook for TwiML Media Streams
+  else if (req.method === 'POST' && req.url === '/voice') {
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Start>
+    <Stream url="wss://ws-relay-server.onrender.com"/>
+  </Start>
+  <Say>Hi, this is Miller Fence. One moment while we connect you to our AI assistant.</Say>
+  <Pause length="1" />
+  <Say>Please begin speaking after the beep.</Say>
+  <Pause length="1" />
+</Response>`;
+
+    res.writeHead(200, { 'Content-Type': 'text/xml' });
+    res.end(twiml);
+  }
+
+  // All other routes
+  else {
     res.writeHead(404).end();
   }
 });
 
+// ✅ WebSocket server for Twilio audio stream
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', async (ws) => {
