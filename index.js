@@ -8,7 +8,7 @@ dotenv.config();
 
 const DG = createClient(process.env.DEEPGRAM_API_KEY);
 const PORT = process.env.PORT || 3000;
-const sessions = {}; // In-memory short-term memory
+const sessions = {};
 
 const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && req.url === '/intake') {
@@ -84,9 +84,9 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
-  // ✅ Cleaned-up TwiML: one-line <Stream> with explicit track param
+  // ✅ Simplest TwiML possible with confirmed connection behavior
   else if (req.method === 'POST' && req.url === '/voice') {
-    const twiml = '<?xml version="1.0" encoding="UTF-8"?><Response><Start><Stream url="wss://ws-relay-server.onrender.com"><Parameter name="track" value="inbound_audio"/></Stream></Start><Say>Hi, this is Miller Fence. One moment while we connect you to our AI assistant.</Say><Pause length="1" /><Say>Please begin speaking after the beep.</Say><Pause length="1" /></Response>';
+    const twiml = '<?xml version="1.0" encoding="UTF-8"?><Response><Start><Stream url="wss://ws-relay-server.onrender.com"/></Start><Say>Hi, this is Miller Fence. One moment while we connect you to our AI assistant.</Say><Pause length="1" /><Say>Please begin speaking after the beep.</Say><Pause length="1" /></Response>';
     res.writeHead(200, { 'Content-Type': 'text/xml' });
     res.end(twiml);
   }
