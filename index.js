@@ -24,7 +24,6 @@ wss.on('connection', async (ws) => {
       console.log('📝 Transcript:', text);
       transcriptBuffer += ' ' + text.toLowerCase();
 
-      // Basic intent detection
       if (transcriptBuffer.length > 0 && !transcriptBuffer.includes('__intent_recognized__')) {
         let intent = 'other';
         if (transcriptBuffer.includes('quote') || transcriptBuffer.includes('new job')) {
@@ -53,6 +52,7 @@ wss.on('connection', async (ws) => {
       const parsed = JSON.parse(msg);
       if (parsed.event === 'media' && parsed.media.payload) {
         const audio = Buffer.from(parsed.media.payload, 'base64');
+        console.log(`🔊 Received audio chunk (seq ${parsed.sequenceNumber})`);
         await dgConnection.send(audio);
       }
     } catch (err) {
