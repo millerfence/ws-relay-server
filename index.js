@@ -17,7 +17,7 @@ wss.on('connection', async (ws) => {
   const dgConnection = await deepgram.listen.live({
     model: 'nova',
     smart_format: true,
-    encoding: 'linear16',
+    encoding: 'mulaw',
     sample_rate: 8000
   });
 
