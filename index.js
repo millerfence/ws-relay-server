@@ -1,76 +1,62 @@
-import WebSocket, { WebSocketServer } from 'ws';
-import express from 'express';
-import http from 'http';
-import { createClient } from '@deepgram/sdk';
 
-const PORT = process.env.PORT || 10000;
+import express from 'express';
+import { WebSocketServer } from 'ws';
+import { Deepgram } from '@deepgram/sdk';
+
 const app = express();
-const server = http.createServer(app);
+const port = 10000;
+const server = app.listen(port, () => {
+  console.log(`✅ Server running on port ${port}`);
+});
+
 const wss = new WebSocketServer({ server });
 
-const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY || 'YOUR_DEEPGRAM_API_KEY';
+const deepgram = new Deepgram(process.env.DEEPGRAM_API_KEY);
 
-wss.on('connection', async (ws) => {
+wss.on('connection', (ws) => {
   console.log('📞 SignalWire client connected');
 
-  const deepgram = createClient(DEEPGRAM_API_KEY);
-  const dgConnection = await deepgram.listen.live({
-    model: 'nova',
-    smart_format: true,
-    encoding: 'mulaw',
-    sample_rate: 8000
+  const dgSocket = deepgram.transcription.live({
+    punctuate: true,
+    language: 'en-US',
   });
 
-  let transcriptBuffer = '';
+  dgSocket.on('open', () => {
+    console.log('🧠 Deepgram connection opened');
+  });
 
-  dgConnection.on('transcriptReceived', (data) => {
-    const text = data.channel.alternatives[0]?.transcript;
-    if (text && text.length > 0) {
-      console.log('📝 Transcript:', text);
-      transcriptBuffer += ' ' + text.toLowerCase();
-
-      if (transcriptBuffer.length > 0 && !transcriptBuffer.includes('__intent_recognized__')) {
-        let intent = 'other';
-        if (transcriptBuffer.includes('quote') || transcriptBuffer.includes('new job')) {
-          intent = 'new job';
-        } else if (transcriptBuffer.includes('existing')) {
-          intent = 'existing job';
-        } else if (transcriptBuffer.includes('warranty')) {
-          intent = 'warranty';
-        }
-        console.log(`🤖 Intent detected: ${intent}`);
-        transcriptBuffer += ' __intent_recognized__';
-      }
+  dgSocket.on('transcriptReceived', (data) => {
+    const transcript = JSON.parse(data);
+    if (transcript.channel && transcript.channel.alternatives.length > 0) {
+      const text = transcript.channel.alternatives[0].transcript;
+      if (text) console.log(`📝 Transcript: ${text}`);
     }
   });
 
-  dgConnection.on('error', (err) => {
-    console.error('❌ Deepgram error:', err);
+  dgSocket.on('error', (error) => {
+    console.error('💥 Deepgram error:', error);
   });
 
-  dgConnection.on('close', () => {
+  dgSocket.on('close', () => {
     console.log('🧠 Deepgram connection closed');
   });
 
-  ws.on('message', async (msg) => {
+  ws.on('message', (message) => {
     try {
-      const parsed = JSON.parse(msg);
-      if (parsed.event === 'media' && parsed.media.payload) {
-        const audio = Buffer.from(parsed.media.payload, 'base64');
-        console.log(`🔊 Received audio chunk (seq ${parsed.sequenceNumber})`);
-        await dgConnection.send(audio);
+      const msg = JSON.parse(message);
+      if (msg.event === 'start') {
+        console.log('🔔 Start stream event received');
+      } else if (msg.event === 'media') {
+        const audio = Buffer.from(msg.media.payload, 'base64');
+        dgSocket.send(audio);
       }
-    } catch (err) {
-      console.error('⚠️ Message parsing error:', err);
+    } catch (error) {
+      console.error('❌ Failed to process message:', error);
     }
   });
 
   ws.on('close', () => {
     console.log('❎ SignalWire client disconnected');
-    dgConnection.finish();
+    dgSocket.finish();
   });
-});
-
-server.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
 });
