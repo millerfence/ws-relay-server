@@ -14,7 +14,12 @@ wss.on('connection', async (ws) => {
   console.log('📞 SignalWire client connected');
 
   const deepgram = createClient(DEEPGRAM_API_KEY);
-  const dgConnection = await deepgram.listen.live({ model: 'nova', smart_format: true });
+  const dgConnection = await deepgram.listen.live({
+    model: 'nova',
+    smart_format: true,
+    encoding: 'linear16',
+    sample_rate: 8000
+  });
 
   let transcriptBuffer = '';
 
